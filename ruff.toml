@@ -1,16 +1,15 @@
-fix = true
-include = ['./sudareph/**/**.py']
 extend-include = ['./notebooks/**.ipynb']
 indent-width = 4
 line-length = 120
 
 [lint]
 select = [
-  'E',  # pycodestyle Errors
-  'W',  # pycodestyle Warnings
   'F',  # pyflakes
-  'PL', # pylint
+  'W',  # pycodestyle Warnings
+  'E',  # pycodestyle Errors
   'I',  # isort
+  'UP', # pyupgrade
+  'PL', # pylint
 ]
 pydocstyle.convention = "google"
 isort.known-first-party = ["sudareph"]
