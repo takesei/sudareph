@@ -13,3 +13,7 @@ typing:
 
 test:
 	@poetry run pytest -v -s --pdb --ff --doctest-modules
+
+init:
+	@poetry install
+	@pre-commit install
