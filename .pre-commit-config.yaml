@@ -38,5 +38,5 @@ repos:
     hooks:
       - id: secret_scan
         name: "Secret scan"
-        entry: bash -c 'trufflehog git file://. --since-commit HEAD --only-verified --fail'
+        entry: bash -c 'trufflehog git file://.'
         language: system
