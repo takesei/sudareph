@@ -1,0 +1,21 @@
+extend-include = ['./notebooks/**.ipynb']
+indent-width = 4
+line-length = 120
+
+[lint]
+select = [
+  'F',  # pyflakes
+  'W',  # pycodestyle Warnings
+  'E',  # pycodestyle Errors
+  'I',  # isort
+  'UP', # pyupgrade
+  'PL', # pylint
+]
+pydocstyle.convention = "google"
+isort.known-first-party = ["sudareph"]
+
+
+[format]
+quote-style = 'single'
+indent-style = 'space'
+docstring-code-format = true
