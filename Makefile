@@ -12,7 +12,7 @@ typing:
 	@poetry run mypy
 
 test:
-	@poetry run pytest -v -s --pdb --ff --doctest-modules
+	@poetry run pytest -v -s --pdb --ff --doctest-modules --cov=. --cov-report=html
 
 init:
 	@poetry install
