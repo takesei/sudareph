@@ -23,3 +23,20 @@ repos:
       - id: ruff-format
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.2.3
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml # Checks yaml files for parseable syntax.
+      - id: check-json # Checks json files for parseable syntax.
+      - id: check-added-large-files
+      - id: check-merge-conflict # Check for files that contain merge conflict strings.
+
+  - repo: local
+    hooks:
+      - id: secret_scan
+        name: "Secret scan"
+        entry: bash -c 'trufflehog git file://. --since-commit HEAD --only-verified --fail'
+        language: system

@@ -13,6 +13,8 @@ select = [
   'I',  # isort
 ]
 pydocstyle.convention = "google"
+isort.known-first-party = ["sudareph"]
+
 
 [format]
 quote-style = 'single'

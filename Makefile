@@ -1,6 +1,6 @@
 .PHONY: all, check, format, typing, test
 
-all: format check typing test
+all: format check typing test init
 
 check:
 	@poetry run ruff check
