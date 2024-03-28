@@ -1,15 +1,13 @@
-ame: Run unit test
+name: Run unit test
 
 on: [pull_request]
-permissions:
-  pull-request: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.10]
+        python-version: ["3.7", "3.10"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
