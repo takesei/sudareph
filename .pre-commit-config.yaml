@@ -36,6 +36,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: jupyter-nb-clear-output
+        name: jupyter-nb-clear-output
+        files: \.ipynb$
+        language: system
+        entry: poetry run jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
+
+  - repo: local
+    hooks:
       - id: secret_scan
         name: "Secret scan"
         entry: bash -c 'trufflehog git file://.'
