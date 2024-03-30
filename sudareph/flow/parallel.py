@@ -21,14 +21,14 @@ class Parallel(Flow[IN, dict[str, Any]]):
     @override
     def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[dict[str, Any]]:
         try:
-            data_arg: Data[Any] = arg if isinstance(arg, Data) else Data('In', arg)
+            data_arg: Data[Any] = arg if isinstance(arg, Data) else Data(arg)
             logger.info(f'[ParallelFlow/{self.name}] Started')
             res = {k: v(data_arg, log=log).output for k, v in self.br_graph.items()}
             logger.info(f'[ParallelFlow/{self.name}] Done')
         except Exception as e:
             logger.error(f'[ParallelFlow/{self.name}] Terminated')
             raise e
-        return Data(f'{self.name}: output', res)
+        return Data(res, name=f'{self.name}: output')
 
     @override
     def __add__(self, right):

@@ -16,6 +16,6 @@ def test_parallel_flow():
         B=Summation('B1:') >> Summation('B2:'),
     )
 
-    res = Data('name', 'ARG') > pipeline
+    res = Data('ARG') > pipeline
 
     assert res.output == dict(A='A2:A1:Init:ARG', B='B2:B1:Init:ARG')

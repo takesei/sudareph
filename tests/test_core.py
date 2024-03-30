@@ -41,7 +41,7 @@ def test_single_flow():
             return self.prefix + str1
 
     work = Summation('POST:')
-    input = Data('name', 'value')
+    input = Data('value')
 
     result = input > work
 
@@ -58,6 +58,6 @@ def test_multi_flow():
             return self.prefix + str1
 
     pipeline = Summation('PRE:') >> Summation('POST:')
-    res = Data('name', 'value') > pipeline
+    res = Data('value') > pipeline
 
     assert res.output == 'POST:PRE:value'

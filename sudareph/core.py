@@ -13,7 +13,7 @@ T = TypeVar('T')
 class Data(Generic[T]):
     _value: T
 
-    def __init__(self, name: str, value: T) -> None:
+    def __init__(self, value: T, name: str = 'IN') -> None:
         self.name = name
         self._value = value
 
@@ -32,8 +32,6 @@ RET = TypeVar('RET')
 
 
 class Node(ABC, Generic[IN, OUT]):
-    name: str
-
     @abstractmethod
     def __call__(self, arg: Data[IN], log: bool) -> Data[OUT]: ...
 
@@ -45,32 +43,43 @@ class Node(ABC, Generic[IN, OUT]):
 
 
 class Work(Node[IN, OUT]):
-    name: str
+    _name: str
     func: Optional[Callable[[IN], OUT]]
 
-    def __init__(self, name: str, func: Optional[Callable[[IN], OUT]]):
-        self.name = name
+    def __init__(self, name: str, func: Optional[Callable[[IN], OUT]] = None):
+        self._name = name
         self.func = func
 
+    def register(self, func: Callable[[IN], OUT]) -> None:
+        self.func = func
+
+    @property
+    def name(self):
+        return f'[Work/{self._name}]'
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
     @override
-    def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[OUT]:
+    def __call__(self, arg: IN | Data[IN], log: bool = True) -> Data[OUT]:
         try:
             if log:
-                logger.info(f'[Work/{self.name}] Start')
+                logger.info(f'{self.name} Start')
             if self.func is None:
-                raise NotImplementedError('Function is not assigned')
+                raise NotImplementedError(f'[Work/{self.name}] Function is not assigned')
             res: Optional[OUT] = None
             if isinstance(arg, Data):
                 res = self.func(arg.output)
             else:
                 res = self.func(arg)
             if log:
-                logger.info(f'[Work/{self.name}] Done')
+                logger.info(f'{self.name} Done')
         except Exception as e:
             if log:
-                logger.exception(f'Work@{self.name} Work failed, terminated')
+                logger.exception(f'{self.name} Work failed, terminated')
             raise e
-        return Data(f'[Work/{self.name}] Output', res)
+        return Data(res, name=f'{self.name} Output')
 
     @override
     def __add__(self, right) -> 'Work[IN, RET]':
@@ -81,17 +90,17 @@ class Work(Node[IN, OUT]):
                 rres: Data[RET] = right(lres, log=False)
                 return rres.output
 
-            return Work(f'[Work/{"+".join([self.name, right.name])}]', work)
+            return Work('+'.join([self._name, right._name]), work)
         else:
             raise NotImplemented  # noqa: F901
 
     @override
     def __rshift__(self, right: Node[OUT, RET]) -> 'Flow[IN, RET]':
         if isinstance(right, Work):
-            return Flow(f'[Work/{"->".join([self.name, right.name])}]', self, right)
+            return Flow('->'.join([self._name, right._name]), self, right)
         elif isinstance(right, Flow):
             graph = [self, *right.graph]
-            return Flow('Compound', *graph)
+            return Flow('->'.join([self._name, right._name]), *graph)
         else:
             raise NotImplemented  # noqa: F901
 
@@ -100,27 +109,35 @@ class Flow(Node[IN, OUT]):
     graph: list[Node[Any, Any]]
 
     def __init__(self, name: str, *node: Node[Any, Any]):
-        self.name = name
+        self._name = name
         self.graph = list(node)
 
+    @property
+    def name(self):
+        return f'[Flow/{self._name}]'
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
     @override
-    def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[OUT]:
+    def __call__(self, arg: IN | Data[IN], log: bool = True) -> Data[OUT]:
         try:
-            logger.info(f'[Flow/{self.name}] Started')
-            res: Data[Any] = arg if isinstance(arg, Data) else Data('In', arg)
+            logger.info(f'{self.name} Started')
+            res: Data[Any] = arg if isinstance(arg, Data) else Data(arg)
             for work in self.graph:
                 res = work(res, log=log)
-            logger.info(f'[Flow/{self.name}] Done')
+            logger.info(f'{self.name} Done')
         except Exception as e:
-            logger.exception(f'[Flow/{self.name}] Terminated')
+            logger.error(f'{self.name} Terminated')
             raise e
-        return Data(f'{self.name}: output', cast(OUT, res.output))
+        return Data(cast(OUT, res.output), name=f'{self.name}: output')
 
     @override
     def __add__(self, right) -> 'Flow[IN, RET]':
         if type(right) is Flow:
             graph = [*self.graph, *right.graph]
-            return Flow('Compound', *graph)
+            return Flow('+'.join([self._name, right._name]), *graph)
         else:
             raise NotImplemented  # noqa: F901
 
@@ -128,9 +145,9 @@ class Flow(Node[IN, OUT]):
     def __rshift__(self, right: Node[OUT, RET]) -> 'Flow[IN, RET]':
         if isinstance(right, Work):
             graph = [*self.graph, right]
-            return Flow('Compound', *graph)
+            return Flow('->'.join([self._name, right._name]), *graph)
         elif isinstance(right, Flow):
             graph = [self, right]
-            return Flow('Compound', *graph)
+            return Flow('->'.join([self._name, right._name]), *graph)
         else:
             raise NotImplemented  # noqa: F901
