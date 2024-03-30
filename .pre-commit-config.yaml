@@ -18,14 +18,14 @@ repos:
         types: [yaml]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.2.1
+    rev: v0.3.4
     hooks:
       - id: ruff-format
         types_or: [python, pyi, jupyter]
-        args: [--config ./ruff.toml]
+        args: [--config, ruff.toml]
       - id: ruff
         types_or: [python, pyi, jupyter]
-        args: [--fix, --exit-non-zero-on-fix, --config ./ruff.toml]
+        args: [--fix, --exit-non-zero-on-fix, --config, ruff.toml]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.2.3

@@ -1,6 +1,8 @@
 import logging
 
-from sudareph.core import Data, Flow, Parallel, Work, work_cls, work_fn
+from sudareph.core import Data, Flow, Work
+from sudareph.flow import Parallel
+from sudareph.utils import work_cls, work_fn
 
 __all__ = ['Data', 'Work', 'Flow', 'Parallel', 'work_fn', 'work_cls']
 __version__ = '0.0.1'

@@ -1,8 +1,10 @@
 import logging
-from functools import wraps
-from typing import Any, Callable, Generic, TypeVar, cast
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
-logger = logging.getLogger(__name__)
+from typing_extensions import override
+
+logger = logging.getLogger('sudare')
 
 
 T = TypeVar('T')
@@ -26,111 +28,109 @@ class Data(Generic[T]):
 
 IN = TypeVar('IN')
 OUT = TypeVar('OUT')
-R = TypeVar('R')
+RET = TypeVar('RET')
 
 
-class Work(Generic[IN, OUT]):
+class Node(ABC, Generic[IN, OUT]):
     name: str
-    func: Callable[[IN], OUT]
 
-    def __init__(self, name: str, func: Callable[[IN], OUT]):
+    @abstractmethod
+    def __call__(self, arg: Data[IN], log: bool) -> Data[OUT]: ...
+
+    @abstractmethod
+    def __add__(self, right: 'Node[OUT, RET]') -> 'Node[IN, RET]': ...
+
+    @abstractmethod
+    def __rshift__(self, right: 'Node[OUT, RET]') -> 'Node[IN, RET]': ...
+
+
+class Work(Node[IN, OUT]):
+    name: str
+    func: Optional[Callable[[IN], OUT]]
+
+    def __init__(self, name: str, func: Optional[Callable[[IN], OUT]]):
         self.name = name
         self.func = func
 
-    def __call__(self, arg: IN) -> Data[OUT]:
-        logger.info(f'[Work/{self.name}] Started')
+    @override
+    def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[OUT]:
         try:
-            res = self.func(arg)
+            if log:
+                logger.info(f'[Work/{self.name}] Start')
+            if self.func is None:
+                raise NotImplementedError('Function is not assigned')
+            res: Optional[OUT] = None
+            if isinstance(arg, Data):
+                res = self.func(arg.output)
+            else:
+                res = self.func(arg)
+            if log:
+                logger.info(f'[Work/{self.name}] Done')
         except Exception as e:
-            logger.exception(f'Work@{self.name} Work failed')
+            if log:
+                logger.exception(f'Work@{self.name} Work failed, terminated')
             raise e
+        return Data(f'[Work/{self.name}] Output', res)
+
+    @override
+    def __add__(self, right) -> 'Work[IN, RET]':
+        if isinstance(right, Work):
+
+            def work(arg: IN) -> RET:
+                lres: Data[OUT] = self(arg, log=False)
+                rres: Data[RET] = right(lres, log=False)
+                return rres.output
+
+            return Work(f'[Work/{"+".join([self.name, right.name])}]', work)
         else:
-            logger.info(f'[Work/{self.name}] Done')
-            return Data(f'[Work/{self.name}] Output', res)
+            raise NotImplemented  # noqa: F901
 
-    def concat(self, *works: 'Work[Any, Any]') -> 'Work[IN, Any]':
-        def work(arg: IN) -> Any:
-            res: Any = self.func(arg)
-            for work in works:
-                res = work.func(res)
-            return res
+    @override
+    def __rshift__(self, right: Node[OUT, RET]) -> 'Flow[IN, RET]':
+        if isinstance(right, Work):
+            return Flow(f'[Work/{"->".join([self.name, right.name])}]', self, right)
+        elif isinstance(right, Flow):
+            graph = [self, *right.graph]
+            return Flow('Compound', *graph)
+        else:
+            raise NotImplemented  # noqa: F901
 
-        return Work(f'[Work/{"->".join([w.name for w in works])}]', work)
 
+class Flow(Node[IN, OUT]):
+    graph: list[Node[Any, Any]]
 
-class Flow(Generic[IN, OUT]):
-    works: list[Work[Any, Any]]
-
-    def __init__(self, name: str, *works: Work[Any, Any]):
+    def __init__(self, name: str, *node: Node[Any, Any]):
         self.name = name
-        self.works = list(works)
+        self.graph = list(node)
 
-    def __call__(self, arg: IN) -> Data[OUT]:
-        logger.info(f'[Flow/{self.name}] Started')
+    @override
+    def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[OUT]:
         try:
-            res: Any = arg
-            for work in self.works:
-                res = work(res).output
-            res = cast(OUT, res)
+            logger.info(f'[Flow/{self.name}] Started')
+            res: Data[Any] = arg if isinstance(arg, Data) else Data('In', arg)
+            for work in self.graph:
+                res = work(res, log=log)
+            logger.info(f'[Flow/{self.name}] Done')
         except Exception as e:
             logger.exception(f'[Flow/{self.name}] Terminated')
             raise e
+        return Data(f'{self.name}: output', cast(OUT, res.output))
+
+    @override
+    def __add__(self, right) -> 'Flow[IN, RET]':
+        if type(right) is Flow:
+            graph = [*self.graph, *right.graph]
+            return Flow('Compound', *graph)
         else:
-            logger.info(f'[Flow/{self.name}] Done')
-            return Data(f'{self.name}: output', res)
+            raise NotImplemented  # noqa: F901
 
-    def __rshift__(self, right: 'Flow[OUT, R]') -> 'Flow[IN, R]':
-        works = self.works + right.works
-        return Flow(f'{self.name}->{right.name}', *works)
-
-
-class Parallel(Flow[IN, dict[str, Any]]):
-    def __init__(
-        self,
-        name: str,
-        **works: Work[IN, Any],
-    ):
-        self.name = name
-
-        def func(arg: IN) -> dict[str, Any]:
-            res: dict[str, Any] = {}
-            for k, v in works.items():
-                v.name = f'ParallelWork@{k}={v.name}'
-                res |= {k: v(arg).output}
-            return res
-
-        self.works = [Work(f'<ParallelFlow/{self.name}>', func)]
-        self._works = works
-
-    # TODO: Never called
-    def __call__(self, arg) -> Data[dict[str, Any]]:
-        logger.info(f'[ParallelFlow/{self.name}] Started')
-        try:
-            res = {k: v(arg).output for k, v in self._works.items()}
-        except Exception as e:
-            logger.error(f'[ParallelFlow/{self.name}] Terminated')
-            raise e
+    @override
+    def __rshift__(self, right: Node[OUT, RET]) -> 'Flow[IN, RET]':
+        if isinstance(right, Work):
+            graph = [*self.graph, right]
+            return Flow('Compound', *graph)
+        elif isinstance(right, Flow):
+            graph = [self, right]
+            return Flow('Compound', *graph)
         else:
-            logger.info(f'[ParallelFlow/{self.name}] Done')
-            return Data(f'{self.name}: output', res)
-
-
-class work_fn:
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __call__(self, func: Callable[[IN], OUT]) -> Flow[IN, OUT]:
-        return Flow(self.name, Work(self.name, func))
-
-
-class work_cls:
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __call__(self, func: Callable[..., Callable[[IN], OUT]]) -> Callable[..., Flow[IN, OUT]]:
-        @wraps(func)
-        def init(*args: Any, **kwargs: Any):
-            ret = func(*args, **kwargs)
-            return Flow(self.name, Work(self.name, ret))
-
-        return init
+            raise NotImplemented  # noqa: F901
