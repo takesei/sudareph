@@ -1,14 +1,17 @@
-from sudareph import Data, Parallel, work_cls
+from sudareph.data import Data
+from sudareph.flow import Flow, Parallel
+from sudareph.work import Work
 
 
 def test_parallel_flow():
-    @work_cls('Sum')
-    class Summation:
-        def __init__(self, prefix: str):
-            self.prefix = prefix
+    Summation = Work('Sum', prefix=str)
+    flow = Summation('PRE:') >> Summation('POST:')
 
-        def __call__(self, str1: str) -> str:
-            return self.prefix + str1
+    assert isinstance(flow, Flow)
+
+    @Summation.register
+    def sum(a, prefix: str):
+        return prefix + a
 
     pipeline = Summation('Init:') >> Parallel(
         'Parallel',
