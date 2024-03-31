@@ -1,52 +1,45 @@
 import logging
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
-from typing_extensions import override
-
-from sudareph.core import Data, Flow, Node, Work
+from sudareph.core import BaseData, BaseFlow, Node
+from sudareph.data import Data
+from sudareph.flow import Flow
+from sudareph.work import Work
 
 logger = logging.getLogger('sudare')
 
 IN = TypeVar('IN')
-OUT = TypeVar('OUT')
+OUT_co = TypeVar('OUT_co', bound=dict[str, Any], covariant=True)
+RET = TypeVar('RET')
 
 
-class Parallel(Flow[IN, dict[str, Any]]):
-    br_graph: dict[str, Node[IN, Any]]
+class Parallel(Generic[IN, OUT_co]):
+    graph: dict[str, list[Node[Any, Any]]]
 
-    def __init__(self, name: str, **branch_nodes: Node[IN, Any]):
+    def __init__(self, name: str = 'Parallel', **branch_nodes: Node[Any, Any]):
         self.name = name
-        self.br_graph = branch_nodes
+        self.graph = {}
+        for k, v in branch_nodes.items():
+            self.graph |= {k: [v]}
 
-    @override
-    def __call__(self, arg: IN | Data[IN], log: bool = False) -> Data[dict[str, Any]]:
+    @property
+    def fname(self):
+        return f'[ParallelFlow/{self.name}]'
+
+    def __call__(self, arg: IN | BaseData[IN], log: bool = False) -> BaseData[OUT_co]:
         try:
             data_arg: Data[Any] = arg if isinstance(arg, Data) else Data(arg)
-            logger.info(f'[ParallelFlow/{self.name}] Started')
-            res = {k: v(data_arg, log=log).output for k, v in self.br_graph.items()}
-            logger.info(f'[ParallelFlow/{self.name}] Done')
+            logger.info(f'{self.fname} Started')
+            res = {k: v[0](data_arg, log=log).output for k, v in self.graph.items()}
+            logger.info(f'{self.fname} Done')
         except Exception as e:
-            logger.error(f'[ParallelFlow/{self.name}] Terminated')
+            logger.error(f'{self.fname} Terminated')
             raise e
-        return Data(res, name=f'{self.name}: output')
+        return Data(cast(OUT_co, res), name=f'{self.name}: output')
 
-    @override
-    def __add__(self, right):
-        if type(right) is Parallel:
-            br_graph = self.br_graph
-            for k, v in right.br_graph.items():
-                if k in br_graph:
-                    br_graph[k] = br_graph[k] >> v
-                else:
-                    br_graph[k] = v
-            return Parallel('Compound', **br_graph)
-        else:
-            raise NotImplemented  # noqa: F901
-
-    @override
-    def __rshift__(self, right: Node[dict[str, Any], OUT]) -> 'Flow[IN, OUT]':
+    def __rshift__(self, right: Node[OUT_co, RET]) -> BaseFlow[IN, RET]:
         if isinstance(right, (Work, Flow)):
-            graph: list[Parallel[IN] | Node[dict[str, Any], OUT]] = [self, right]
-            return Flow('Compound', *graph)
+            graph = [self, right]
+            return cast(Flow[IN, RET], Flow('Compound', *graph))
         else:
             raise NotImplemented  # noqa: F901
