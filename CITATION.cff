@@ -1,0 +1,26 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Sudareph
+message: 'If you use this software, please cite it as below.'
+type: software
+authors:
+  - given-names: Takeda
+    family-names: Sei
+    email: sei06k14@gmail.com
+    orcid: 'https://orcid.org/0009-0001-7269-4772'
+    affiliation: NTT (Japan)
+repository-code: 'https://github.com/takesei/sudareph'
+abstract: >-
+  Sudareph is a pipeline tool to rapid-prototype
+  experimental code.
+keywords:
+  - pipeline
+  - rapid-prototype
+  - prototyping
+  - experiment
+license: MIT
+commit: 2d68353
+version: v0.0.1-alpha
+date-released: '2024-04-01'
