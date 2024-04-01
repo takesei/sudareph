@@ -31,7 +31,16 @@ class BaseWork(Node[IN, OUT], Protocol):
 @runtime_checkable
 class BaseFlow(Node[IN, OUT], Protocol):
     @property
-    def graph(self) -> dict[str, list[Node[Any, Any]]]: ...
+    def graph(self) -> list[Node[Any, Any]]: ...
+
+    @override
+    def __rshift__(self, right: 'Node[OUT, RET]') -> 'BaseFlow[IN, RET]': ...
+
+
+@runtime_checkable
+class BaseMultiFlow(Node[IN, OUT], Protocol):
+    @property
+    def graph(self) -> dict[str, BaseFlow[Any, Any]]: ...
 
     @override
     def __rshift__(self, right: 'Node[OUT, RET]') -> 'BaseFlow[IN, RET]': ...

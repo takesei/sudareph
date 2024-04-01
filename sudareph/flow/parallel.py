@@ -1,10 +1,9 @@
 import logging
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, Iterable, TypeVar, cast
 
 from sudareph.core import BaseData, BaseFlow, Node
 from sudareph.data import Data
 from sudareph.flow import Flow
-from sudareph.work import Work
 
 logger = logging.getLogger('sudare')
 
@@ -14,13 +13,13 @@ RET = TypeVar('RET')
 
 
 class Parallel(Generic[IN, OUT_co]):
-    graph: dict[str, list[Node[Any, Any]]]
+    graph: dict[str, BaseFlow[Any, Any]]
 
     def __init__(self, name: str = 'Parallel', **branch_nodes: Node[Any, Any]):
         self.name = name
         self.graph = {}
         for k, v in branch_nodes.items():
-            self.graph |= {k: [v]}
+            self.graph |= {k: Flow(f'{self.name}->{k}', v)}
 
     @property
     def fname(self):
@@ -30,7 +29,7 @@ class Parallel(Generic[IN, OUT_co]):
         try:
             data_arg: Data[Any] = arg if isinstance(arg, Data) else Data(arg)
             logger.info(f'{self.fname} Started')
-            res = {k: v[0](data_arg, log=log).output for k, v in self.graph.items()}
+            res = {k: v(data_arg, log=log).output for k, v in self.graph.items()}
             logger.info(f'{self.fname} Done')
         except Exception as e:
             logger.error(f'{self.fname} Terminated')
@@ -38,8 +37,8 @@ class Parallel(Generic[IN, OUT_co]):
         return Data(cast(OUT_co, res), name=f'{self.name}: output')
 
     def __rshift__(self, right: Node[OUT_co, RET]) -> BaseFlow[IN, RET]:
-        if isinstance(right, (Work, Flow)):
-            graph = [self, right]
+        if isinstance(right, (BaseFlow)):
+            graph: Iterable[Node[Any, Any]] = [self, right]
             return cast(Flow[IN, RET], Flow('Compound', *graph))
         else:
             raise NotImplemented  # noqa: F901

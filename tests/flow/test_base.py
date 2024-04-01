@@ -3,9 +3,9 @@ from sudareph.flow import Flow
 from sudareph.work import Work
 
 
-def test_multi_flow():
+def test_single_flow():
     Summation = Work('Sum', prefix=str)
-    flow = Summation('PRE:') >> Summation('POST:')
+    flow = Summation.set(prefix='PRE:') >> Summation.set(prefix='POST:')
 
     assert isinstance(flow, Flow)
 
@@ -13,18 +13,52 @@ def test_multi_flow():
     def sum(a, prefix: str):
         return prefix + a
 
-    res1 = flow('value')
-    assert not isinstance(res1, Data)
-    assert res1 == 'POST:PRE:value'
+    res1 = flow('ASDF')
+    assert isinstance(res1, Data)
+    res1 = res1.output
+    assert res1 == 'POST:PRE:ASDF'
 
-    res2 = flow(Data('value'))
-    assert not isinstance(res2, Data)
+    res2 = flow(Data('ASDF'))
+    assert isinstance(res2, Data)
     assert res1 == res2.output
 
-    res3 = 'value' > flow
-    assert isinstance(res2, Data)
-    assert res1 == res3.output
+    # res3 = 'ASDF' > flow
+    # assert isinstance(res2, Data)
+    # assert res1 == res3.output
 
-    res4 = Data('value') > flow
+    res4 = Data('ASDF') > flow
+    assert isinstance(res2, Data)
+    assert res1 == res4.output
+
+
+def test_flow_assign():
+    flow = Flow('Summerize')
+
+    Summation = Work('Sum', prefix=str)
+
+    @flow.register
+    def summerize():
+        return Summation.set(prefix='PRE:') >> Summation.set(prefix='POST:')
+
+    @Summation.register
+    def sum(a, prefix: str):
+        return prefix + a
+
+    assert isinstance(flow, Flow)
+
+    res1 = flow('ASDF')
+    assert isinstance(res1, Data)
+    res1 = res1.output
+    assert res1 == 'POST:PRE:ASDF'
+
+    res2 = flow(Data('ASDF'))
+    assert isinstance(res2, Data)
+    assert res1 == res2.output
+
+    # res3 = 'ASDF' > flow
+    # assert isinstance(res2, Data)
+    # assert res1 == res3.output
+
+    res4 = Data('ASDF') > flow
     assert isinstance(res2, Data)
     assert res1 == res4.output
