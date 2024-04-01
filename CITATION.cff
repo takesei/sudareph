@@ -6,14 +6,14 @@ title: Sudareph
 message: 'If you use this software, please cite it as below.'
 type: software
 authors:
-  - given-names: Takeda
-    family-names: Sei
+  - given-names: Sei
+    family-names: Takeda
     email: sei06k14@gmail.com
     orcid: 'https://orcid.org/0009-0001-7269-4772'
     affiliation: NTT (Japan)
 repository-code: 'https://github.com/takesei/sudareph'
 abstract: >-
-  Sudareph is a pipeline tool to rapid-prototype
+  Sudareph is a pipeline tool to rapid prototype
   experimental code.
 keywords:
   - pipeline
