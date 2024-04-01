@@ -1,8 +1,9 @@
 import logging
 
-from sudareph.core import Data, Flow, Parallel, Work, work_cls, work_fn
+from sudareph import data, flow, work
+from sudareph.core import BaseData, BaseFlow, BaseWork, Node
 
-__all__ = ['Data', 'Work', 'Flow', 'Parallel', 'work_fn', 'work_cls']
+__all__ = ['Data', 'work', 'flow', 'Parallel', 'Node', 'BaseFlow', 'BaseWork', 'BaseData', 'data']
 __version__ = '0.0.1'
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())

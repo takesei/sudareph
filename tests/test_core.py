@@ -1,83 +1,38 @@
-from sudareph import Data, Flow, Parallel, work_cls, work_fn
+import pytest
+
+from sudareph.core import BaseData, BaseFlow, BaseWork, Node
+from sudareph.data import Data
+from sudareph.flow import Flow
+from sudareph.work import Work
 
 
-def test_class_decorator():
-    @work_cls('Sum')
-    class Summation:
-        def __init__(self, prefix: str):
-            self.prefix = prefix
+def test_match_flow():
+    flow = [Flow('temp')]
 
-        def __call__(self, str1: str) -> str:
-            return self.prefix + str1
-
-    work = Summation('POST:')
-    assert isinstance(work, Flow)
-
-    res = work('ASDF')
-    assert isinstance(res, Data)
-    assert res.output == 'POST:ASDF'
+    for f in flow:
+        assert isinstance(f, BaseFlow), f'failed at {f}'
+        assert isinstance(f, Node), f'failed at {f}'
 
 
-def test_fn_decorator():
-    @work_fn('sum')
-    def sum(a):
-        return 'POST:' + a
+def test_match_work():
+    cb_works = [Work('temp', hoge=str)]
+    for w in cb_works:
+        assert isinstance(w, Work)
+        with pytest.raises(AttributeError):
+            w.set()
+            w.set(asdf='nanachi')
+            w.set(hoge='fuga', asdf='nanachi')
+        w.set(hoge='fuga')
 
-    work = sum
-    assert isinstance(work, Flow)
+    works = [Work('temp'), *[c.set(hoge='fuga') for c in cb_works]]
 
-    res = work('ASDF')
-    assert isinstance(res, Data)
-    assert res.output == 'POST:ASDF'
-
-
-def test_single_flow():
-    @work_cls('Sum')
-    class Summation:
-        def __init__(self, prefix: str):
-            self.prefix = prefix
-
-        def __call__(self, str1: str) -> str:
-            return self.prefix + str1
-
-    work = Summation('POST:')
-    input = Data('name', 'value')
-
-    result = input > work
-
-    assert result.output == 'POST:value'
+    for w in works:
+        assert isinstance(w, BaseWork), f'failed at {w}'
+        assert isinstance(w, Node), f'failed at {w}'
 
 
-def test_multi_flow():
-    @work_cls('Sum')
-    class Summation:
-        def __init__(self, prefix: str):
-            self.prefix = prefix
+def test_match_data():
+    data = [Data('temp')]
 
-        def __call__(self, str1: str) -> str:
-            return self.prefix + str1
-
-    pipeline = Summation('PRE:') >> Summation('POST:')
-    res = Data('name', 'value') > pipeline
-
-    assert res.output == 'POST:PRE:value'
-
-
-def test_parallel_flow():
-    @work_cls('Sum')
-    class Summation:
-        def __init__(self, prefix: str):
-            self.prefix = prefix
-
-        def __call__(self, str1: str) -> str:
-            return self.prefix + str1
-
-    pipeline = Summation('Init:') >> Parallel(
-        'Parallel',
-        A=Summation('A1:') >> Summation('A2:'),
-        B=Summation('B1:') >> Summation('B2:'),
-    )
-
-    res = Data('name', 'ARG') > pipeline
-
-    assert res.output == dict(A='A2:A1:Init:ARG', B='B2:B1:Init:ARG')
+    for d in data:
+        assert isinstance(d, BaseData), f'failed at {d}'
